@@ -190,7 +190,18 @@ class Gatherer:
         #
         # Remember: Higher fitness = more likely to reproduce!
         
-        return self.age / 100.0  # Minimal version: just survival time
+        # Reward multiple useful survival behaviors
+        survival_score = self.age / 100.0
+        food_score = self.food_collected * 2.0
+        energy_score = self.energy / 100.0
+
+        # Small bonus for surviving until the fitness check
+        alive_bonus = 1.0 if self.alive else 0.0
+
+        # Reward resource gathering most strongly while still valuing survival
+        fitness = survival_score + food_score + energy_score + alive_bonus
+
+        return max(0.0, fitness)
     
     def take_damage(self):
         """Handle death/life loss"""

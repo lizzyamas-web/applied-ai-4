@@ -51,9 +51,24 @@ class GeneticAlgorithm:
         #
         # Remember: Selection determines which traits get passed to next generation!
         
-        # Minimal version: just take top 50% of population
-        survival_count = max(1, len(fitness_scores) // 2)  # Top 50%
-        survivors = [gatherer for gatherer, fitness in fitness_scores[:survival_count]]
+        # Use tournament selection to balance strong fitness with diversity
+        survival_count = max(2, len(fitness_scores) // 2)
+        
+        # Always preserve the best gatherer (elitism)
+        survivors = [fitness_scores[0][0]]
+
+        # Select the remaining survivors through small tournaments
+        while len(survivors) < survival_count:
+            tournament_size = min(3, len(fitness_scores))
+            competitors = random.sample(fitness_scores, tournament_size)
+
+            # Choose the highest-fitness gatherer in this tournament
+            winner = max(competitors, key=lambda item: item[1])[0]
+
+            # Avoid adding the same individual more than once
+            if winner not in survivors:
+                survivors.append(winner)
+                
         return survivors
     
     def crossover(self, parent1, parent2):
@@ -90,10 +105,18 @@ class GeneticAlgorithm:
         
         for gene_name in gatherer.genes:
             if random.random() < MUTATION_RATE:
-                # Minimal version: just flip a coin and randomize the gene completely
                 min_val, max_val = GENE_RANGES[gene_name]
-                gatherer.genes[gene_name] = random.uniform(min_val, max_val)
-    
+
+                # Use a small Gaussian mutation instead of replacing
+                # a successful gene with a completely random value.
+                gene_range = max_val - min_val
+                mutation_amount = random.gauss(0, gene_range * 0.10)
+
+                new_value = gatherer.genes[gene_name] + mutation_amount
+
+                # Keep the mutated gene inside its valid range.
+                gatherer.genes[gene_name] = max(min_val, min(max_val, new_value))
+                
     def create_next_generation(self, population):
         # Evaluate fitness
         fitness_scores = self.evaluate_fitness(population)
